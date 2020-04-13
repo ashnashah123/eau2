@@ -92,10 +92,36 @@ void test_serialize_bool() {
     assert(deserialized_b == b);
 }
 
+void test_serialize_char() {
+    Serialize* s = new Serialize();
+
+    char ch = 'S';
+    s->write(ch);
+    char* result = s->getChars();
+
+    Deserialize* d = new Deserialize(result);
+
+    char deserialized_ch = d->readChar();
+    assert(deserialized_ch == ch);
+}
+
+void test_serialize_chars() {
+    Serialize* s = new Serialize();
+
+    char* chs = (char*)"String";
+    s->write(chs);
+    char* result = s->getChars();
+
+    Deserialize* d = new Deserialize(result);
+
+    char* deserialized_chs = d->readChars(6 * sizeof(char));
+    assert(deserialized_chs == chs);
+}
+
 void test_serialize_register_message() {
     Serialize s;
     sockaddr_in sender;
-    Register* register_message = new Register(1, 8081);
+    Register* register_message = new Register(1, 8081, "127.0.0.1");
 
     register_message->serialize(s);
     char* result = s.getChars();
@@ -110,14 +136,16 @@ void test_serialize_register_message() {
 
 int main(int argc, char* argv[]) {
 
-    test_serialize_int();
-    test_serialize_sizet();
-    test_serialize_string();
-    test_serialize_string_and_int();
-    test_serialize_double();
-    test_serialize_bool();
+    // test_serialize_int();
+    // test_serialize_sizet();
+    // test_serialize_string();
+    // test_serialize_string_and_int();
+    // test_serialize_double();
+    // test_serialize_bool();
+    test_serialize_char();
+    // test_serialize_chars();
 
-    test_serialize_register_message();
+    // test_serialize_register_message();
 
     return 0;
 }

@@ -40,14 +40,14 @@ public:
             FileReader fr;
             delete DataFrame::fromVisitor(&in, &kv, "S", fr);
         }
-        fprintf(stderr, "received all the messages from my queue\n");
         local_count();
         std::cout << "finished local count!!\n";
         reduce();
     }
  
     void start_kv() {
-        kv.run_();
+        kv.start();
+        // kv.join();
     }
   /** Returns a key for given node.  These keys are homed on master node
    *  which then joins them one by one. */
@@ -60,9 +60,15 @@ public:
     
     /** Compute word counts on the local node and build a data frame. */
     void local_count() {
-        Deserialize* d = new Deserialize(kv.waitAndGet_(&in)->get_data());
-        DataFrame* words = DataFrame::deserialize(d, &kv);
         std::cout << "NODE: " << this_node() << ": starting local count ...\n";
+        Deserialize* d;
+        if (this_node() == 0) {
+            d = new Deserialize(kv.get_(&in)->get_data());
+        }
+        else {
+            d = new Deserialize(kv.waitAndGet_(&in)->get_data());
+        }
+        DataFrame* words = DataFrame::deserialize(d, &kv);
         SIMap map;
         Adder add(map);
         words->local_map(add, this_node());
@@ -81,7 +87,6 @@ public:
         merge(DataFrame::deserialize(new Deserialize(kv.get_(own)->get_data()), &kv), map);
 
         for (size_t i = 1; i < NUM_NODES; ++i) { // merge other nodes
-            std::cout << "inside for loop, shouldn't be here!! \n";
             Key* ok = mk_key(i);
             merge(DataFrame::deserialize(new Deserialize(kv.waitAndGet_(ok)->get_data()), &kv), map);
             delete ok;

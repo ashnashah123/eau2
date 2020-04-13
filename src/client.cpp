@@ -10,7 +10,7 @@
 
 int main(int argc, char* argv[]) {
     // command line arguments
-    // ./client -nodes 3 -index 2 -port 8082 -masterip 127.0.0.1 -masterport 8080
+    // ./client -nodes 3 -index 1 -port 8081 -masterip 127.0.0.1 -masterport 8080 -ip 127.0.0.2
     size_t num_nodes = atoi(argv[2]);
     size_t index = atoi(argv[4]);
     std::cout << "INDEX: " << index << "\n";
@@ -18,19 +18,19 @@ int main(int argc, char* argv[]) {
     std::cout << "atoi(argv[6]): " << port << "\n";
     char* masterip = argv[8];
     size_t masterport = atoi(argv[10]);
+    char* client_ip = argv[12];
 
     NetworkIp* network = new NetworkIp();
-    network->client_init(index, port, masterip, masterport);
+    network->client_init(index, port, masterip, masterport, client_ip);
+    // network->client_init(1, 8081, (char*)"127.0.0.1", 8080, (char*)"127.0.0.2");
 
     KVStore* kv = new KVStore(*network, index);
+    // KVStore* kv = new KVStore(*network, 1);
     WordCount* wc = new WordCount(index, *kv);
+    // WordCount* wc = new WordCount(1, *kv);
     
     wc->start_kv();
     wc->run_();
-
-    while(1) {
-
-    }
     
     return 0;
 }

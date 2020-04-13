@@ -240,7 +240,6 @@ public:
     size_t num_elements_per_chunk(Key* k) {
         Value* val = kv_->get_(k);
         DoubleArray* arr_ = dynamic_cast<DoubleArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
-        // std::cout << "num elements per chunk for key: | " << dynamic_cast<Key*>(k)->get_name()->cstr_ << " | " << arr_->size() << " | \n";
         return arr_->size();
     }
 
@@ -332,7 +331,6 @@ public:
     size_t num_elements_per_chunk(Key* k) {
         Value* val = kv_->get_(k);
         BoolArray* arr_ = dynamic_cast<BoolArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
-        // std::cout << "num elements per chunk for key: | " << dynamic_cast<Key*>(k)->get_name()->cstr_ << " | " << arr_->size() << " | \n";
         return arr_->size();
     }
 
@@ -430,9 +428,10 @@ public:
     }   
 
     size_t num_elements_per_chunk(Key* k) {
+        // std::cout << "KEY NAME IN NUM ELEMENTS PER CHUNK: " << dynamic_cast<Key*>(k)->get_name()->cstr_  << "\n";
         Value* val = kv_->get_(k);
         StringArray* arr_ = dynamic_cast<StringArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
-        std::cout << "num elements per chunk for key: | " << dynamic_cast<Key*>(k)->get_name()->cstr_ << " | " << arr_->size() << " | \n";
+        // std::cout << "num elements per chunk for key: | " << dynamic_cast<Key*>(k)->get_name()->cstr_ << " | " << arr_->size() << " | \n";
         return arr_->size();
     }
 

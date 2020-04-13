@@ -15,7 +15,7 @@ public:
 
     Value(Deserialize& d) {
         size = d.readSizeT();
-        char* data = d.readChars(size);
+        data = d.readChars(size);
     }
 
     ~Value() {}

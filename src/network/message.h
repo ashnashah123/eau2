@@ -7,7 +7,7 @@
 
 #include <arpa/inet.h> //close 
 
-#define NUM_NODES 3
+#define NUM_NODES 2
 
 class Message : public Object {
 public:
@@ -26,7 +26,26 @@ public:
         return target_;
     }
 
-    virtual char* serialize(Serialize& s) { assert(false); }
+    String* type_to_string() {
+        if(kind_ == MsgKind::REGISTER) {
+            return new String("REGISTER");
+        }
+        else if(kind_ == MsgKind::DIRECTORY) {
+            return new String("DIRECTORY");
+        }
+        else if(kind_ == MsgKind::DATA) {
+            return new String("DATA");
+        }
+        else if(kind_ == MsgKind::DATA_REQUEST) {
+            return new String("DATA_REQUEST");
+        }
+        else {
+            assert(false);
+        }
+    }
+
+    virtual void serialize(Serialize& s) { assert(false); }
+
     static Message* deserialize(Deserialize& d, sockaddr_in sender);
 };
 
@@ -36,34 +55,43 @@ public:
     size_t port_;
     size_t idx_; 
     sockaddr_in client_; // ip address
+    char* ip_address_; 
 
-    Register(size_t idx, size_t port) {
+    Register(size_t idx, size_t port, char* client_ip) {
         // puts my ip_address into a struct so that it can be sent over to the server as bytes
         port_ = port;
         idx_ = idx;
         kind_ = MsgKind::REGISTER;
         sender_ = idx;
         target_ = 0;
+        ip_address_ = client_ip;
     }
 
     Register(Deserialize& d, sockaddr_in sender) {
         kind_ = MsgKind::REGISTER;
-        client_ = sender;
         port_ = d.readSizeT();
         idx_ = d.readSizeT();
         target_ = d.readSizeT();
         sender_ = d.readSizeT();
+        ip_address_ = d.readString()->cstr_;
+
+        client_ = sender;
+        client_.sin_family = AF_INET;
+        client_.sin_addr.s_addr = INADDR_ANY;
+        client_.sin_port = htons(port_);
+        inet_pton(AF_INET, ip_address_, &client_.sin_addr);
     }
 
     // destructor
     ~Register() {}
 
-    char* serialize(Serialize& s) {
+    void serialize(Serialize& s) {
         s.write(new String("REGISTER"));
         s.write(port_);
         s.write(idx_);
         s.write(target_);
         s.write(sender_);
+        s.write(new String(ip_address_));
     }
 
     static Register* deserialize(Deserialize &d, sockaddr_in sender) {
@@ -118,13 +146,13 @@ public:
     ~Directory() {}
 
     void log() { 
-        // for(size_t i = 0; i < NUM_NODES; i++) {
-            // std::cout << "inside directory class port at i: " << i << ": " << ports_[i] << "\n";
-            // std::cout << "inside directory class address at i: " << i << ": " << addresses_[i]->cstr_ << "\n";
-        // } 
+        for(size_t i = 0; i < NUM_NODES - 1; i++) {
+            std::cout << "inside directory class port at i: " << i << ": " << ports_[i] << "\n";
+            std::cout << "inside directory class address at i: " << i << ": " << addresses_[i]->cstr_ << "\n";
+        } 
     }
 
-    char* serialize(Serialize& s) {
+    void serialize(Serialize& s) {
         s.write(new String("DIRECTORY"));
         s.write(clients);
         for(size_t i = 0; i < clients; i++) {
@@ -147,7 +175,6 @@ public:
     Key* key_;
     Value* data_;
     
-    // constructor
     DataMessage(Key* key, Value* data, size_t target, size_t sender) {
         kind_ = MsgKind::DATA;
         key_ = key;
@@ -164,13 +191,12 @@ public:
         data_ = Value::deserialize(d);
     }
 
-    char* serialize(Serialize& s) {
+    void serialize(Serialize& s) {
         s.write(new String("DATA"));
         key_->serialize(&s);
         s.write(target_);
         s.write(sender_);
         data_->serialize(s);
-        return s.getChars();
     }
 
     static DataMessage* deserialize(Deserialize& d) {
@@ -197,7 +223,7 @@ public:
         sender_ = d.readSizeT();
     }
 
-    void Serialize(Serialize& s) {
+    void serialize(Serialize& s) {
         s.write(new String("DATA_REQUEST"));
         key_->serialize(&s);
         s.write(target_);
@@ -212,12 +238,9 @@ public:
 
 // TODO: why does this take a sender? What would it be used for?
 Message* Message::deserialize(Deserialize& d, sockaddr_in sender) {
-    std::cout << "offset in deserializer: " << d.offset << "\n";
     String* type = d.readString();
-    std::cout << "offset in deserializer after reading in the type string: " << d.offset << "\n";
 
     assert(type != nullptr);
-    std::cout << "type in message deserialize: " << type->cstr_ << "\n";
     Message* result; 
     if (type->equals(new String("REGISTER"))) {
         result = dynamic_cast<Message*>(Register::deserialize(d, sender));

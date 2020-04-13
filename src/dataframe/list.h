@@ -10,6 +10,7 @@ class BoolArray;
 #define MAX_SIZE 5
 
 union Payload {
+public:
     String* s_;
     int i_; 
     double d_;
@@ -83,6 +84,7 @@ public:
     }
 
     char* serialize(Serialize* s) {
+        std::cout << "BASE ARRAY SERIALIZE TYPE: " << type_ << "\n";
         s->write(capacity_);
         s->write(type_);
         s->write(num_elements_);
@@ -218,10 +220,15 @@ public:
 };
 
 BaseArray* BaseArray::deserialize(Deserialize* d) {
-    size_t capacity = d->readSizeT();
+    std::cout << "about to deserialize a basearray \n";
+    size_t cap = d->readSizeT(); // read in size_t capacity NECESSARY
+    std::cout << "BASE ARRAY DESERIALIZE capacity BEING READ IN: " << cap << "\n";
+
     char type = d->readChar();
+    std::cout << "BASE ARRAY DESERIALIZE TYPE BEING READ IN: " << type << "\n";
     size_t num_elements = d->readSizeT();
-    
+    std::cout << "BASE ARRAY DESERIALIZE num elements BEING READ IN: " << num_elements << "\n";
+
     BaseArray* result;
     switch(type) {
     case 'S' : result = new StringArray(); break;

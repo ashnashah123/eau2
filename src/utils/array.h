@@ -89,8 +89,6 @@ class Array : public Object {
 
         Object* get(size_t idx) {
             assert(idx < num_elements_);
-            
-            Object* obj = array_[idx];
             return array_[idx];
         }
 

@@ -55,6 +55,21 @@ We also properly implemented waitAndGet on the KVStore now that we added threadi
 ### Milestone 4:
 We started with the PseudoNetwork code for this, and attempted to get it to work. There is a lot of debugging we are sifting through, but we implemented the logic of distributing data over the pseudonetwork. Each application inherits from the Thread class, and each application is spun up in the main method. The KVStore also now holds the network object so that it can interface with the network. 
 
+### Milestone 5:
+We worked partially through the PseudoNetwork and then moved onto integrating the real network with this. We have implemeted a lot of logic in the KVStore which holds a network and uses it to interface with the map that holds all the data.
+
+For the network, we implemented:
+- the Network_Ip class which contains methods for server and client init. They create the sockets and bind them to the appropriate ports. 
+- more message types. We now have: DATA, DATA_REQUEST, REGISTER, DIRECTORY. The DATA message is when one node sends data to another node and the DATA_REQUEST is for when a node requests data from another node. 
+
+In the KVStore:
+- We now have the KVStore inheriting from Thread so that it can run in its own loop as it waits for messages to come in.
+    - When a DATA message comes in, the data is added to this kvstore's map. It is stored at its original key, as we do not intend to make a copy of the data, and we intend to put it in this kvstore's map as if this map was a cache. We plan to implement a cache eventually and this will have a time limit on number of items it holds, that way one node does not end up holding data from every single node. If the data belongs on the node (i.e. the incoming key's home is the same as the current node num, then the message will be put into the kvstore.) Both the put_in_cache and put_ methods put into the map, but when we implement a caching mechanism, we plan to make the cache separate. 
+    
+    - When a DATA_REQUEST message comes in, the kvstore has to look in its map for the data at the requested key. The waitAndGet method is called on the requested key, as it may not be in this node just yet. For example, the clients request the DF immediately from node 0 (server), so if the server just calls get() right away, it might not actually have the DF just yet as it is still reading in the file. Hence, anyone who needs to get data and send it to someone else should call waitAndGet just as a safety check in case the data has not yet been added to the map. 
+    
+    - the distribute_df_to_all() method is called in the fromVisitor function and is meant for the DF to be distributed to all nodes. 
+
 ## Level 2 implementation:
 
 ### Milestone 1:
@@ -71,6 +86,9 @@ We implemented fromScalar in order to get the example given from class to run.
 ### Milestone 4:
 We refactored a lot of code for this milestone. We cleaned up our array classes as well as columns. Our columns now hold keys which point to chunks of data, which are our newly refactored Array classes. This helped us with the "distributed" portion of the assignment. We also did this so that the DataFrame API would not have to change too much because the column classes took care of the interfacing with the KVStore. We added all the classes given to us for the WordCounter example.
 
+### Milestone 5:
+We did not change very much in this layer, but as we were writing code for our Column classes, we noticed that we should refactor these classes, as we started having a lot of repeated code. Due to time constraints and wanting to move forward with functionality, we did not refactor the columns yet, but plan to in the upcoming week. 
+
 ## Level 3 implementation:
 Because Level 3 is the layer where the user writes code that sits on top of the first two players, Level 3 is mostly use cases, which can be seen in the section below.
 
@@ -79,6 +97,13 @@ We copied in the code suggested to get to run and ran it with threads to prepare
 
 ### Milestone 4:
 We now have a main method which is used to spin up multiple WordCounters running on different threads. The WordCount API itself deals with mocking the nodes and kicking off each application. 
+
+### Milestone 5:
+We have server and client .cpp files. They each have a main method which reads in arguments from the command line (example of how to run this is below in the STATUS section). After reading in args from the command line, an instance of a NetworkIp is created and server_init/client_init is called with the appropriate parameters from the command line. They each take the index of the node, the port, and their IP address. The client also takes the server's port and ip address. A KVStore is then initialized, with the network and node index as its parameter. The WordCount application is also initialized with the kvstore as its parameter as well as the node index. 
+
+The WordCount then calls start_kv() which spins up the thread for the KVStore and puts the KVStore in an infinite listening loop as it listens for messages. 
+
+The WordCount then calls its own run_() method to kick off the WordCount application. The WordCount class no longer inherits from Thread, as only the KVStore needs a thread. 
 
 # Use cases
 The example of the system that computes a sum and checks the computation is one use case.
@@ -94,44 +119,53 @@ A successful use case is what was given to us to run for this assignment. This u
 ## Milestone 4:
 The WordCount is a use case for this. 
 
+## Milestone 5:
+The WordCount and Linus applications are use cases for this. 
+
 # Open questions
 
-## Milestone 4
-- Passing NetworkIfc by reference?? How to set up the constructor of the Application class? Did we do this correctly?
-- Is this filereader supposed to be for data that doesn't fit into memory?
-- We are having issues figuring out the node index in the column class when we need the kv store to get us data. Is the node index something we should pass around? We tried grabbing the thread id and looking it up in the thread_id to node_num map that the Network holds, but for some reason we were on a thread which was not the same one that was registered. We also feel like we are passing around the kv store everywhere, is that something that makes sense?
+## Milestone 5
+- How do we shut down the program nicely? Where do we call the teardown?
+- How are we supposed to have the client and server "listen" for messages nicely without just using an infinite while loop? (In KVStore's run_() method)
+
 
 # Status
-We worked a lot on refactoring code this week to make chunks of data. We could probably clean up some of the logic in the Column classes, but due to time constraints, we chose to move forward with debugging since we had already spent a lot of time refactoring this week. We have the code/logic written for implementing the WordCounter with a PseudoNetwork, but have been making our way through bugs with what we have set up. We currently are running a very simple example of just one node and have issues with data retrieval. It seems as though data is being put in our kvstore just fine, but perhaps have a serialization issue or some confusion with types which is preventing us from retrieving data properly from the kv store.
+We worked on getting the real network layer up and running with the WordCounter app. We have the code/logic written for implementing the WordCounter with a Network, but have been making our way through bugs during serialization and deserialization and sending dataframes between nodes.
 
-We have learned a LOT about refactoring and trying to balance that time :) We also got burned a bit this week by not testing in smaller chunks as we implemented the pseudonetwork classes. We didn't really know to test in smaller chunks without setting up the entire system, but maybe we could have done more with testing serialization/deserialization of classes, although it felt like there wasn't much to test on a smaller scale before we implemented the whole thing. But spending a whole day slogging through bugs isn't fun either. ¯\_(ツ)_/¯ We have learned a lot and time management is hard.
+We are not currently running the Linus application. Once we finish the network layer and get it working, we will start on Linus for the final code walk.
 
-We left print statements in our code to show how far it gets. It can be run using: ```make ; make run```
+Since we are in the process of debugging, we have hard-coded one server and one client default values into the server.cpp and client.cpp. An example of how to run one server and 2 clients is below. To run the client app:
+```
+./client -nodes 3 -index 1 -port 8081 -masterip 127.0.0.1 -masterport 8080 -ip 127.0.0.2
+./client -nodes 3 -index 2 -port 8082 -masterip 127.0.0.1 -masterport 8080 -ip 127.0.0.3
+```
+And to run the server app:
+```
+./server -nodes 3 -index 0 -port 8080 -ip 127.0.0.1
+```
+Argument explanation:
+-nodes is the number of nodes. We currently have a global variable called NUM_NODES that we set, but we will make this dynamic for the final project.
+-index is the index number of the node
+-port is the port of the node
+-masterip is the ip address of the server
+-masterport is the port of the server
+-ip is the ip address of the client / server
+
+These are run from different terminals. In our server.cpp and client.cpp, we currently are taking in the command line arguments in that exact order with the flags. We will eventually do command line parsing for the final project.
 
 - ** NOTE: We commented out the consumption of val_ in get() in string.h. Now you can call get() as many times as you want. Didn't want to waste time debugging right now. **
 
 ## Work that remains:
+- Need to finish implementing the real network layer for Word Count
+- Need to implement the Linus application
+- Need to clean up Column class - can easily abstract this, much like we abstracted BaseArray
 - Continue fixing valgrind errors
 - Get rid of fielder and rower - not needed anymore - do this after we figure out the valgrind issues (was getting messed up when we tried to change Schema in Row)
 - NEED TO CLEAN UP fromVisitor()
 - Update tests - many don't work anymore with certain changes to columns now holding keys. 
 - Finish implementing the network - fix bugs
-- Need to clean up Column class - can easily make this look like BaseArray
+- Do proper command line parsing
 
 ## Milestone 5 Notes/Work Completed:
-- Commented out set in DF and Columns - no longer needed
+- Deleted out set in DF and Columns - no longer needed
 - Assumption we have made: When we receive data from a different node, we store it in our kvstore at the old key that is given to us. We don't think it really makes sense that the data should be stored at a new key that reflects `this node` since then it gets confusing as to who actually owns the data (the other node or this node?) We also don't want to reset the key to this node because eventually this data will be stored in a cache, and if we flush the cache we will toss all the data as it will no longer live on its original node. Our put_ method in kvstore then takes a parameter that determines if it was initially distributed by node 0. If distributed by node 0 (in the beginning in fromVisitor) then there is a check for the home of the key so that the node knows it should put the data on itself. Otherwise, it was data received by another node as the return for waitAndGet and hence should just be added to this node's kvstore at its original key. 
-
-## Questions:
-- How do we set this up with multiple terminal windows? Are we doing this right? Did it based off of last networking assignment
-    - When to call wordcount to start? Do we need to sleep it or make it wait for some time?
-    - show the main methods for server, client, and main
-- Doesn't server need an IP address? 
-
-- Serialization for messages?
-- Should all the clients and server both connect to 8080? 
-- for(size_t i = 0; i < sizeof(ports_) / sizeof(size_t); i++)
-
------- 
-- Will we need a teardown method/how will that get set up?
-- Ask about passing current node_num around?

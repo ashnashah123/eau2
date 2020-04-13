@@ -130,8 +130,8 @@ public:
         return df;
     }
 
+    // TODO: Clean this up/abstract this once we have a working network layer (Clean up for final code walk)
     static DataFrame* fromVisitor(Key* in, KVStore* kv, const char* schema, Writer &writer) {
-        // Schema sch{schema};
         Schema* sch = new Schema(schema);
         DataFrame* result = new DataFrame(*sch, kv);
         size_t chunk_idx = 0;
@@ -161,6 +161,7 @@ public:
                     arr->push_back(r.get_string(i));
                 }
                 else if (sch->col_type(i) == 'I') {
+                    std::cout << "ABOUT TO PUSH BACK AN INT" << "\n";
                     IntArray* arr = dynamic_cast<IntArray*>(base_arrays.get(i));
                     arr->push_back(r.get_int(i));
                     std::cout << "pushing back an INT to the df: " << r.get_int(i) << "\n"; 
@@ -222,9 +223,11 @@ public:
                 result->columns_->get(i)->add_key(key);
             }
         }
-
+        std::cout << "RIGHT BEFORE WE SERIALIZE THE DF IN FROM VISITOR\n";
         // add the df to the kv store at the in key
-        Value* val = new Value(result->serialize(new Serialize()));
+        Value* val = new Value(result->serialize(new Serialize())); // THIS HAPPENS IN WORD_COUNT LOCAL_COUNT METHOD WHEN EACH CLIENT CALLS WAITANDGET
+        std::cout << "================!!!!!===BOUT TO PUT THE DATAFRAME IN THE NODE 0 IN FROM VISITOR=========================\n";
+        // kv->put_(in, val);
         kv->distribute_df_to_all(in, val);
 
         return result;
@@ -425,6 +428,8 @@ public:
         for (size_t i = 0; i < columns_->size(); i++) {
             for (size_t j = 0; j < get_num_keys_per_column_(); j++) {
                 Key* key = columns_->get(i)->get_key(j);
+                std::cout << "IN LOCAL MAP: CHECKING THE KEY HOME IS ON THIS NODE SO THAT WE CAN ADD TO SI MAP: " << key->home() << "\n";
+                std::cout << "This current node: " << node_num << "\n";
                 if (key->home() == node_num) {
                     for (size_t k = 0; k < columns_->get(i)->num_elements_per_chunk(key); k++) {
                         Row r{*schema_};

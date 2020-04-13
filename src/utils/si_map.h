@@ -35,8 +35,9 @@ public:
       if (k.equals(keys_.get(i))) {
         return true;
       }
-    return false;
+      return false;
     }
+    return false;
   }
 
   Object* get(Object& k) {

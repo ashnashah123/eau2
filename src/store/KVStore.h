@@ -12,7 +12,7 @@ public:
     Map map; // does not need to be a pointer - KV store owns map
     Lock lock_;
     NetworkIp* net_;
-    size_t node_num_;
+    size_t node_num_; // the current node this KVStore is on
 
     KVStore() {
     }
@@ -33,13 +33,23 @@ public:
             Message* msg = net_->recv_m();
             if (msg->kind_ == MsgKind::DATA) {
                 DataMessage* data_msg = dynamic_cast<DataMessage*>(msg);
-                put_in_cache_(data_msg->key_, data_msg->data_);
+                if (data_msg->key_->home() == node_num_) {
+                    put_(data_msg->key_, data_msg->data_);
+                }
+                else {
+                    put_in_cache_(data_msg->key_, data_msg->data_);
+                }
+                
             }
             else if (msg->kind_ == MsgKind::DATA_REQUEST) {
                 DataRequest* data_request = dynamic_cast<DataRequest*>(msg);
-                Value* val = get_(data_request->key_);
-                DataMessage* data_msg = new DataMessage(data_request->key_, val, data_request->sender_, node_num_);
-                net_->send_m(data_msg);
+                Value* val = waitAndGet_(data_request->key_);
+                assert(val != nullptr);
+                // if the data does not exist on our node (like if we never had data in the first place so the SI DF was never created... then don't send back a null value)
+                if (val != nullptr) {
+                    DataMessage* data_msg = new DataMessage(data_request->key_, val, data_request->sender_, node_num_);
+                    net_->send_m(data_msg);
+                }
             }
             else {
                 assert(false);
@@ -53,15 +63,18 @@ public:
 
     Value* get_(Key* key) {
         lock_.lock(); // Acquire the lock
-        Value* result = (Value*)map.get(key);
+        Value* result = dynamic_cast<Value*>(map.get(key));
         lock_.unlock();
         return result;
     }
 
     Value* waitAndGet_(Key* key) {
-        // ask the network to get the value for us by sending a data request message with our node num so they know the sender
-        DataRequest* data_request = new DataRequest(key, node_num_);
-        net_->send_m(data_request);
+        // if the key is living / will live on us:
+        if (key->home() != node_num_) {
+            // ask the network to get the value for us by sending a data request message with our node num so they know the sender
+            DataRequest* data_request = new DataRequest(key, node_num_);
+            net_->send_m(data_request);
+        }
         
         lock_.lock();
         while (map.get(key) == nullptr) {

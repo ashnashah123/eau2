@@ -56,7 +56,7 @@ public:
     }
 
     ~Schema() {
-        delete types_;
+        // delete types_;
     }
     
     // serializes this schema
@@ -70,7 +70,11 @@ public:
 
     // deserializes this schema
     static Schema* deserialize(Deserialize* d) {
-        StringArray* types = dynamic_cast<StringArray*>(BaseArray::deserialize(d));
+        std::cout << "ABOUT TO DESERIALIZE THE SCHEMA \n";
+        BaseArray* basearray = BaseArray::deserialize(d);
+        assert(basearray != nullptr);
+        StringArray* types = dynamic_cast<StringArray*>(basearray);
+        assert(types != nullptr);
 
         size_t row_count = d->readSizeT();
 

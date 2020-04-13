@@ -51,8 +51,6 @@ public:
 
 	// serializes the given String and writes it to the buffer
 	void write(String* s) {
-		std::cout << "serializing a string in write(String* s): " << s->cstr_ << "\n";
-		std::cout << "serializing the string's size in write(String* s): " << s->size_ << "\n";
 		size_t growVal = sizeof(char);
 		write(s->size_);
 		growBufferIfNeeded(growVal * s->size_);
@@ -131,20 +129,17 @@ public:
 
 	// reads a char from the buffer
 	char readChar() {
-		char* result = buffer+offset;
-		// result[offset] = 0;
-		offset += sizeof(char);
-		return *result;
+		size_t cpySize = sizeof(char);
+		char result = '\0';
+		memcpy(&result, buffer+offset, cpySize);
+		offset += cpySize;
+		return result;
 	}
 
 	// reads a String from the buffer
 	String* readString() {
 		size_t size = readSizeT();
-		std::cout << "readString()'s size_T size: " << size << "\n";
-
 		char* cstr = readChars(size);
-		std::cout << "readString()'s char* cstr: " << cstr << "\n";
-
 		String* result = new String(cstr, size);
 		return result;
 	}
