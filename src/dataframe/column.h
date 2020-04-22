@@ -60,8 +60,11 @@ public:
         else if (as_bool() != nullptr) {
             return 'B';
         }
-        else {
+        else if (as_string() != nullptr) {
             return 'S';
+        }
+        else {
+            assert(false);
         }
     }
 };
@@ -83,7 +86,7 @@ public:
         s->write(keys_.length());
         for(size_t i = 0; i < keys_.length(); i++) {
             Key* key = dynamic_cast<Key*>(keys_.get(i));
-            key->serialize(s);
+            key->serialize(*s);
         }
         return s->getChars();
     }
@@ -130,8 +133,12 @@ public:
     }
 
     bool equals(Object* other) {
-        // Is there a use case for this?
-        assert(false);
+        if (other == nullptr) return false;
+        if (other == this) return true;
+        IntColumn* x = dynamic_cast<IntColumn*>(other);
+        if (x == nullptr) return false;
+
+        return keys_.equals(&x->keys_);
     }
 
     size_t hash() {
@@ -147,7 +154,7 @@ public:
     }    
     
     size_t num_elements_per_chunk(Key* k) {
-        Value* val = kv_->get_(k);
+        Value* val = kv_->waitAndGet_(k);
         IntArray* arr_ = dynamic_cast<IntArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
         return arr_->size();
     }
@@ -174,7 +181,7 @@ public:
         s->write(keys_.length());
         for(size_t i = 0; i < keys_.length(); i++) {
             Key* key = dynamic_cast<Key*>(keys_.get(i));
-            key->serialize(s);
+            key->serialize(*s);
         }
         return s->getChars();
     }
@@ -221,8 +228,12 @@ public:
     }
 
     bool equals(Object* other) {
-        // Is there a use case for this?
-        assert(false);
+        if (other == nullptr) return false;
+        if (other == this) return true;
+        DoubleColumn* x = dynamic_cast<DoubleColumn*>(other);
+        if (x == nullptr) return false;
+
+        return keys_.equals(&x->keys_);
     }
 
     size_t hash() {
@@ -238,7 +249,7 @@ public:
     }
     
     size_t num_elements_per_chunk(Key* k) {
-        Value* val = kv_->get_(k);
+        Value* val = kv_->waitAndGet_(k);
         DoubleArray* arr_ = dynamic_cast<DoubleArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
         return arr_->size();
     }
@@ -265,7 +276,7 @@ public:
         s->write(keys_.length());
         for(size_t i = 0; i < keys_.length(); i++) {
             Key* key = dynamic_cast<Key*>(keys_.get(i));
-            key->serialize(s);
+            key->serialize(*s);
         }
         return s->getChars();
     }
@@ -312,8 +323,12 @@ public:
     }
 
     bool equals(Object* other) {
-        // Is there a use case for this?
-        assert(false);
+        if (other == nullptr) return false;
+        if (other == this) return true;
+        BoolColumn* x = dynamic_cast<BoolColumn*>(other);
+        if (x == nullptr) return false;
+
+        return keys_.equals(&x->keys_);
     }
 
     size_t hash() {
@@ -329,7 +344,7 @@ public:
     } 
 
     size_t num_elements_per_chunk(Key* k) {
-        Value* val = kv_->get_(k);
+        Value* val = kv_->waitAndGet_(k);
         BoolArray* arr_ = dynamic_cast<BoolArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
         return arr_->size();
     }
@@ -361,7 +376,7 @@ public:
         s->write(keys_.length());
         for(size_t i = 0; i < keys_.length(); i++) {
             Key* key = dynamic_cast<Key*>(keys_.get(i));
-            key->serialize(s);
+            key->serialize(*s);
         }
         return s->getChars();
     }
@@ -409,8 +424,12 @@ public:
     }
 
     bool equals(Object* other) {
-        // Is there a use case for this?
-        assert(false);
+        if (other == nullptr) return false;
+        if (other == this) return true;
+        StringColumn* x = dynamic_cast<StringColumn*>(other);
+        if (x == nullptr) return false;
+
+        return keys_.equals(&x->keys_);
     }
 
     size_t hash() {
@@ -428,10 +447,8 @@ public:
     }   
 
     size_t num_elements_per_chunk(Key* k) {
-        // std::cout << "KEY NAME IN NUM ELEMENTS PER CHUNK: " << dynamic_cast<Key*>(k)->get_name()->cstr_  << "\n";
-        Value* val = kv_->get_(k);
+        Value* val = kv_->waitAndGet_(k);
         StringArray* arr_ = dynamic_cast<StringArray*>(BaseArray::deserialize(new Deserialize(val->get_data())));
-        // std::cout << "num elements per chunk for key: | " << dynamic_cast<Key*>(k)->get_name()->cstr_ << " | " << arr_->size() << " | \n";
         return arr_->size();
     }
 

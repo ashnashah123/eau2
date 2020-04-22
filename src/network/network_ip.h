@@ -102,7 +102,7 @@ public:
 
     /** create a socket and bind it **/
     void init_sock_(size_t port, char* ip_address) {
-        std::cout << "CALLING INIT_SOCK_ WITH IP ADDRESS: " << ip_address << "\n";
+        // std::cout << "CALLING INIT_SOCK_ WITH IP ADDRESS: " << ip_address << "\n";
         assert((sock_ = socket(AF_INET, SOCK_STREAM, 0)) >= 0);
         int opt = 1;
         assert(setsockopt(sock_,
@@ -126,8 +126,17 @@ public:
         Serialize ser;
         msg->serialize(ser);
         char* buf = ser.getChars();
-        
         size_t size = ser.get_size();
+
+        if (msg->kind_ == MsgKind::DATA) {
+            DataMessage* data_msg = dynamic_cast<DataMessage*>(msg);
+            Key k{new String("data-k-0-1"), 1};
+            std::cout << "-> " << data_msg->type_to_string()->cstr_ << " key: " << dynamic_cast<DataMessage*>(data_msg)->key_->get_name()->cstr_ <<"\n";
+        }
+        else {
+            std::cout << "-> " << msg->type_to_string()->cstr_ << "\n";   
+        }
+
         send(conn, &size, sizeof(size_t), 0);
         send(conn, buf, size, 0);
     }
@@ -137,20 +146,25 @@ public:
         socklen_t addrlen = sizeof(sender);
         int req = accept(sock_, (sockaddr*)&sender, &addrlen);
         size_t size = 0;
-        if (read(req, &size, sizeof(size_t)) == 0) {
-            std::cout << "failed to read" << "\n";
-        }
-        
+        assert (read(req, &size, sizeof(size_t)) != 0);
+            
         char* buf = new char[size];
         int rd = 0;
         while (rd != size) {
             rd += read(req, buf + rd, size - rd);
         }
+
         // We may need to bring back the size, don't think we need it for right now
         // Deserialize d(buf, size);
         Deserialize d(buf);
         // sender param: we know who sent it to us so we can send it back (ex. a data request)
         Message* msg = Message::deserialize(d, sender);
+        if (msg->kind_ == MsgKind::DATA) {
+            std::cout << "<- " << msg->type_to_string()->cstr_ << " key: " << dynamic_cast<DataMessage*>(msg)->key_->get_name()->cstr_ << "\n";
+        }
+        else {
+            std::cout << "<- " << msg->type_to_string()->cstr_ << "\n";
+        }
         return msg;
     }
 

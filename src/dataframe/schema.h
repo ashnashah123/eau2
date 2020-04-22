@@ -10,119 +10,85 @@
 //  */
 class Schema : public Object {
 public:
-    StringArray* types_;
-    size_t row_count_;
+    // StringArray* types_;
+    char* types_;
+    size_t width_;
     
     /** Copying constructor */
     Schema(Schema& from) {
         types_ = from.types_;
-        row_count_ = from.row_count_;
+        width_ = from.width_;
+        
     }
     
     /** Create an empty schema **/
     Schema() {
-        types_ = new StringArray();
-        row_count_ = 0;
+        types_ = new char[1];
+        types_[0] = 0;
+        width_ = 0;
     }
     
-    /** Create a schema from a string of types. A string that contains
-        * characters other than those identifying the four type results in
-        * undefined behavior. The argument is external, a nullptr argument is
-        * undefined. **/
+
     Schema(const char* types) {
-        // if types is nullptr, then just construct an empty schema 
-        if (types == nullptr) {
-            Schema();
-        }
-        types_ = new StringArray();
-        row_count_ = 0;
-        for(size_t i = 0; i < strlen(types); i++) {
-            if (types[i] == 'S' || types[i] == 'D' || types[i] == 'B' || types[i] == 'I') {
-                const char* c = &types[i];
-                String* s = new String(c);
-                types_->push_back(s);
-            }
-            else {
-                const char* c = "";
-                types_->push_back(new String(c));
-            }
-        }
+        types_ = strdup(types);
+        width_ = strlen(types_);
     }
 
-    // default constructor for all fields of a schema
-    Schema(StringArray* types, size_t row_count) {
-        types_ = types;
-        row_count_ = row_count;
+    Schema(Deserialize* d) {
+        width_ = d->readSizeT();
+        types_ = d->readChars(width_);
     }
 
-    ~Schema() {
-        // delete types_;
+    const char* to_string() {
+        return types_;
     }
     
     // serializes this schema
-    char* serialize(Serialize* s) {
-        types_->serialize(s);
-
-        s->write(row_count_);
-
-        return s->getChars();
+    void serialize(Serialize* s) {
+        s->write(width_);
+        s->write(types_);
     }
 
     // deserializes this schema
     static Schema* deserialize(Deserialize* d) {
-        std::cout << "ABOUT TO DESERIALIZE THE SCHEMA \n";
-        BaseArray* basearray = BaseArray::deserialize(d);
-        assert(basearray != nullptr);
-        StringArray* types = dynamic_cast<StringArray*>(basearray);
-        assert(types != nullptr);
-
-        size_t row_count = d->readSizeT();
-
-        return new Schema(types, row_count);
+        return new Schema(d);
     }
 
     /** Add a column of the given type and name (can be nullptr), name
         * is external. Names are expectd to be unique, duplicates result
         * in undefined behavior. */
     void add_column(char typ) {
-        if (typ == 'S' || typ == 'D' || typ == 'B' || typ == 'I') {
-            StrBuff buff;
-            buff.c(typ);
-            String* s = buff.get();
-            types_->push_back(s);
-        }
-        else {
-            types_->push_back(nullptr);
-        }   
+        char* new_types = new char[width_ + 2];
+        memcpy(new_types, types_, width_ + 1);
+        types_ = new_types;
+        width_++;
+        types_[width_] = typ;
+        types_[width_ + 1] = 0;
     }
     
     /** Updates the number of rows. No row names at the moment. */
-    void add_row() {
-        row_count_++;
-    }
+    // void add_row() {
+    //     row_count_++;
+    // }
     
     /** Return type of column at idx. An idx >= width is undefined. */
     char col_type(size_t idx) {
-        if (idx >= types_->size()) {
-            printf("index out of bounds. cannot return col type.");
-        }
-        String* type_string = types_->get(idx);
-        if (type_string == nullptr) {
-            return '\0';
+        if (idx >= width()) {
+           assert(false);
         }
         // need to extract the value since the char is wrapped in a string
-        return *type_string->cstr_;
+        return types_[idx];
     }
 
     /** The number of columns */
     size_t width() {
-        return types_->size();
+        return width_;
     }
     
-    /** The number of rows */
-    size_t length() {
-        return row_count_;
-    }
+    // /** The number of rows */
+    // size_t length() {
+    //     return row_count_;
+    // }
 
     bool equals(Object* other) {
         if (other == nullptr) return false;
@@ -130,6 +96,6 @@ public:
         Schema* x = dynamic_cast<Schema*>(other);
         if (x == nullptr) return false;
 
-        return types_->equals(x->types_);
+        return (strcmp(types_, x->types_) == 0) && width_ == x->width_;
     }
 };

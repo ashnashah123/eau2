@@ -8,14 +8,14 @@ public:
     char* data;
     size_t size;
 
-    Value(char* val) {
+    Value(char* val, size_t len) {
         data = val;
-        size = strlen(val);
+        size = len;
     }
 
     Value(Deserialize& d) {
         size = d.readSizeT();
-        data = d.readChars(size);
+        data = d.readCharsNoNull(size);
     }
 
     ~Value() {}
@@ -25,10 +25,10 @@ public:
         return data;
     }
 
-    char* serialize(Serialize& s) {
+    void serialize(Serialize& s) {
         s.write(size);
-        s.write(data);
-        return s.getChars();
+        s.writeNoNull(data, size);
+        return;
     }
 
     static Value* deserialize(Deserialize& d) {

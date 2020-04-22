@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     size_t port = atoi(argv[6]);
     std::cout << "atoi(argv[6]): " << port << "\n";
     char* server_ip = argv[8];
-
+    NUM_NODES = num_nodes;
     NetworkIp* network = new NetworkIp();
     
     network->server_init(index, port, server_ip);

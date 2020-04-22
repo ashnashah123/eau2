@@ -31,10 +31,10 @@ public:
         return name_->equals(key->name_) && home_ == key->home_;
     }
 
-    char* serialize(Serialize* s) {
-        s->write(name_);
-        s->write(home_);
-        return s->getChars();
+    char* serialize(Serialize& s) {
+        s.write(name_);
+        s.write(home_);
+        return s.getChars();
     }
 
     static Key* deserialize(Deserialize& d) {

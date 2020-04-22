@@ -108,25 +108,27 @@ public:
         delete columns_;
     }
 
+    void print() {
+        std::cout << "DataFrame( " << schema_->to_string() << ", ";
+        for (size_t i = 0; i < columns_->size(); i++) {
+            Column* col = columns_->get(i);
+            std::cout << col->num_keys() << ", ";
+        }
+        std::cout << ") \n";
+    }
+
     char* serialize(Serialize* s) {
         schema_->serialize(s);
-
         columns_->serialize(s);
-
         s->write(num_rows_with_data_);
-
         return s->getChars();
     }
 
     static DataFrame* deserialize(Deserialize* d, KVStore* kv) {
-        Schema* schema = Schema::deserialize(d);
-
+        Schema* schema = new Schema(d);
         ColumnList* columns = ColumnList::deserialize(d, schema, kv);
-
         size_t num_rows_with_data = d->readSizeT();
-
         DataFrame* df = new DataFrame(columns, schema, num_rows_with_data);
-
         return df;
     }
 
@@ -157,14 +159,11 @@ public:
             for (size_t i = 0; i < r.width(); i++) {
                 if (sch->col_type(i) == 'S') {
                     StringArray* arr = dynamic_cast<StringArray*>(base_arrays.get(i));
-                    std::cout << "PUSHING back a STRING to the df: " << r.get_string(i)->cstr_ << "\n"; 
                     arr->push_back(r.get_string(i));
                 }
                 else if (sch->col_type(i) == 'I') {
-                    std::cout << "ABOUT TO PUSH BACK AN INT" << "\n";
                     IntArray* arr = dynamic_cast<IntArray*>(base_arrays.get(i));
                     arr->push_back(r.get_int(i));
-                    std::cout << "pushing back an INT to the df: " << r.get_int(i) << "\n"; 
                 }
                 else if (sch->col_type(i) == 'D') {
                     DoubleArray* arr = dynamic_cast<DoubleArray*>(base_arrays.get(i));
@@ -185,9 +184,12 @@ public:
                     size_t node_num = chunk_idx % NUM_NODES;
                     String* buff_val = buff.get();
                     Key* key = new Key(buff_val, node_num);
-
                     BaseArray* arr = dynamic_cast<BaseArray*>(base_arrays.get(i));
-                    Value* val = new Value(arr->serialize(new Serialize()));
+
+                    Serialize s;
+                    arr->serialize(&s);
+                    char* buf = s.getChars();
+                    Value* val = new Value(buf, s.get_size());
                     kv->put_(key, val);
                     result->columns_->get(i)->add_key(key);
                 }
@@ -218,17 +220,21 @@ public:
                 Key* key = new Key(new String(buff.val_), node_num);
 
                 BaseArray* arr = dynamic_cast<BaseArray*>(base_arrays.get(i));
-                Value* val = new Value(arr->serialize(new Serialize()));
+                Serialize s;
+                arr->serialize(&s);
+                char* buf = s.getChars();
+                Value* val = new Value(buf, s.get_size());
                 kv->put_(key, val);            
                 result->columns_->get(i)->add_key(key);
             }
         }
-        std::cout << "RIGHT BEFORE WE SERIALIZE THE DF IN FROM VISITOR\n";
         // add the df to the kv store at the in key
-        Value* val = new Value(result->serialize(new Serialize())); // THIS HAPPENS IN WORD_COUNT LOCAL_COUNT METHOD WHEN EACH CLIENT CALLS WAITANDGET
-        std::cout << "================!!!!!===BOUT TO PUT THE DATAFRAME IN THE NODE 0 IN FROM VISITOR=========================\n";
-        // kv->put_(in, val);
-        kv->distribute_df_to_all(in, val);
+        Serialize df_s;
+        result->serialize(&df_s);
+        char* df_buf = df_s.getChars();
+        Value* val = new Value(df_buf, df_s.get_size());
+        kv->put_(in, val);
+        // kv->distribute_df_to_all(in, val);
 
         return result;
     }
@@ -406,10 +412,10 @@ public:
         }
     }
     
-    /** The number of rows in the dataframe. */
-    size_t nrows() {
-        return schema_->length();
-    }
+    // /** The number of rows in the dataframe. */
+    // size_t nrows() {
+    //     return schema_->length();
+    // }
     
     /** The number of columns in the dataframe.*/
     size_t ncols() {
@@ -424,12 +430,12 @@ public:
     }
     
     void local_map(Adder& add, size_t node_num) {
-        std::cout << "INSIDE LOCAL MAP\n";
+        // std::cout << "INSIDE LOCAL MAP\n";
         for (size_t i = 0; i < columns_->size(); i++) {
             for (size_t j = 0; j < get_num_keys_per_column_(); j++) {
                 Key* key = columns_->get(i)->get_key(j);
-                std::cout << "IN LOCAL MAP: CHECKING THE KEY HOME IS ON THIS NODE SO THAT WE CAN ADD TO SI MAP: " << key->home() << "\n";
-                std::cout << "This current node: " << node_num << "\n";
+                // std::cout << "IN LOCAL MAP: CHECKING THE KEY HOME IS ON THIS NODE SO THAT WE CAN ADD TO SI MAP: " << key->home() << "\n";
+                // std::cout << "This current node: " << node_num << "\n";
                 if (key->home() == node_num) {
                     for (size_t k = 0; k < columns_->get(i)->num_elements_per_chunk(key); k++) {
                         Row r{*schema_};

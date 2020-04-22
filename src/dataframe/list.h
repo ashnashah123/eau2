@@ -74,7 +74,6 @@ public:
 
     void push_back_(DFData data) {
         array_[num_elements_] = data;
-        // fprintf(stderr, "ITEM IN BASE ARRAY array_ %s\n", array_[num_elements_].payload_.s_->cstr_);
         num_elements_++;
     }
 
@@ -83,9 +82,7 @@ public:
         array_[idx] = data;
     }
 
-    char* serialize(Serialize* s) {
-        std::cout << "BASE ARRAY SERIALIZE TYPE: " << type_ << "\n";
-        s->write(capacity_);
+    void serialize(Serialize* s) {
         s->write(type_);
         s->write(num_elements_);
 
@@ -101,11 +98,13 @@ public:
             else if (type_ == 'B') {
                 s->write(element.payload_.b_);
             }
-            else {
+            else if (type_ == 'D') {
                 s->write(element.payload_.d_);
             }
+            else {
+                assert(false);
+            }
         }
-        return s->getChars();
     }
 
     static BaseArray* deserialize(Deserialize* d);
@@ -145,6 +144,7 @@ class DoubleArray : public BaseArray  {
 public:
 
     DoubleArray() : BaseArray('D') {}
+    
     
     void push_back(double val) {
         DFData dfd;
@@ -220,14 +220,13 @@ public:
 };
 
 BaseArray* BaseArray::deserialize(Deserialize* d) {
-    std::cout << "about to deserialize a basearray \n";
-    size_t cap = d->readSizeT(); // read in size_t capacity NECESSARY
-    std::cout << "BASE ARRAY DESERIALIZE capacity BEING READ IN: " << cap << "\n";
+
+    // size_t cap = d->readSizeT(); // read in size_t capacity NECESSARY
 
     char type = d->readChar();
-    std::cout << "BASE ARRAY DESERIALIZE TYPE BEING READ IN: " << type << "\n";
+
     size_t num_elements = d->readSizeT();
-    std::cout << "BASE ARRAY DESERIALIZE num elements BEING READ IN: " << num_elements << "\n";
+
 
     BaseArray* result;
     switch(type) {
@@ -249,8 +248,11 @@ BaseArray* BaseArray::deserialize(Deserialize* d) {
         else if (type == 'B') {
             element.payload_.b_ = d->readBool();
         }
-        else {
+        else if (type == 'D') {
             element.payload_.d_ = d->readDouble();
+        }
+        else {
+            assert(false);
         }
 
         if (type == 'S') {
@@ -262,10 +264,12 @@ BaseArray* BaseArray::deserialize(Deserialize* d) {
         else if (type == 'B') {
             dynamic_cast<BoolArray*>(result)->push_back(element.payload_.b_);
         }
-        else {
+        else if (type == 'D') {
             dynamic_cast<DoubleArray*>(result)->push_back(element.payload_.d_);
-        }                        
+        }         
+        else {
+            assert(false);
+        }               
     }
-    
     return result;
 }

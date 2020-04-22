@@ -28,10 +28,7 @@ public:
   }
 
   bool contains_(Object& k) {
-    std::cout << "INSIDE CONTAINS CONTAINS\n";
     for (int i = 0; i < keys_.length(); i++) {
-      String* s = dynamic_cast<String*>(&k);
-      std::cout << "================ string value in simap contains_: " << s->cstr_ << "===================\n";
       if (k.equals(keys_.get(i))) {
         return true;
       }
@@ -59,15 +56,6 @@ public:
       return 1;
   }
 
-//   size_t erase_(Object& k) {
-//       for (int i = 0; i < keys_.length(); i++) 
-//           if (k.equals(keys_.get(i))) {
-//               keys_.erase_(i);
-//               vals_.erase_(i);
-//               return 1;
-//           }
-//       return 0;
-//   }
 };
 
 /** A generic map class from Object to Object. Subclasses are responsibly of
@@ -111,12 +99,6 @@ public:
         grow();
     size_ += items_[off_(k)].set_(k,v);
   }
-  
-  /** Removes element with given key from the map.  Does nothing if the
-      key is not present.  */
-//   void erase(Object& k) {
-//     size_ -= items_[off_(k)].erase_(k);
-//   }
   
   /** Resize the map, keeping all Item_s. */
   void grow() {

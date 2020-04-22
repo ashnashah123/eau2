@@ -38,7 +38,7 @@ public:
         if (this_node() == 0) {
             fprintf(stderr, "inside the run method on node 0\n");
             FileReader fr;
-            delete DataFrame::fromVisitor(&in, &kv, "S", fr);
+            DataFrame::fromVisitor(&in, &kv, "S", fr);
         }
         local_count();
         std::cout << "finished local count!!\n";
@@ -63,7 +63,7 @@ public:
         std::cout << "NODE: " << this_node() << ": starting local count ...\n";
         Deserialize* d;
         if (this_node() == 0) {
-            d = new Deserialize(kv.get_(&in)->get_data());
+            d = new Deserialize(kv.waitAndGet_(&in)->get_data());
         }
         else {
             d = new Deserialize(kv.waitAndGet_(&in)->get_data());

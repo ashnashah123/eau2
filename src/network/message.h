@@ -7,7 +7,7 @@
 
 #include <arpa/inet.h> //close 
 
-#define NUM_NODES 2
+size_t NUM_NODES; 
 
 class Message : public Object {
 public:
@@ -147,8 +147,8 @@ public:
 
     void log() { 
         for(size_t i = 0; i < NUM_NODES - 1; i++) {
-            std::cout << "inside directory class port at i: " << i << ": " << ports_[i] << "\n";
-            std::cout << "inside directory class address at i: " << i << ": " << addresses_[i]->cstr_ << "\n";
+            // std::cout << "inside directory class port at i: " << i << ": " << ports_[i] << "\n";
+            // std::cout << "inside directory class address at i: " << i << ": " << addresses_[i]->cstr_ << "\n";
         } 
     }
 
@@ -192,8 +192,9 @@ public:
     }
 
     void serialize(Serialize& s) {
+        // std::cout << "TYPE WRITING IN in DataMessage::serialize: DATA\n";
         s.write(new String("DATA"));
-        key_->serialize(&s);
+        key_->serialize(s);
         s.write(target_);
         s.write(sender_);
         data_->serialize(s);
@@ -201,6 +202,25 @@ public:
 
     static DataMessage* deserialize(Deserialize& d) {
         return new DataMessage(d);
+    }
+
+    bool equals(Object* other) {
+        if (other == nullptr) return false;
+        if (other == this) return true;
+        DataMessage* x = dynamic_cast<DataMessage*>(other);
+        if (x == nullptr) return false;
+        if (x->kind_ != MsgKind::DATA) {
+            return false;
+        }
+        
+        // std::cout << "key_: " << key_->get_name()->cstr_ << "\n";
+        // std::cout << "x->key_: " << dynamic_cast<Key*>(x->key_)->get_name()->cstr_ << "\n";
+        // std::cout << "strcmp(data_->get_data(), x->data_->get_data()): " << strcmp(data_->get_data(), x->data_->get_data()) << "\n";
+        // std::cout << "target_: " << target_ << "\n";
+        // std::cout << "x->target_: " << x->target_ << "\n";
+        // std::cout << "sender: " << sender_ << "\n";
+        // std::cout << "x->sender: " << x->sender_ << "\n";
+        return key_->equals(x->key_) && (strcmp(data_->get_data(), x->data_->get_data()) == 0) && target_ == x->target_ && sender_ == x->sender_;
     }
 };
 
@@ -225,7 +245,7 @@ public:
 
     void serialize(Serialize& s) {
         s.write(new String("DATA_REQUEST"));
-        key_->serialize(&s);
+        key_->serialize(s);
         s.write(target_);
         s.write(sender_);
     }

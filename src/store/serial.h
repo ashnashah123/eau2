@@ -1,7 +1,6 @@
 #pragma once
 //lang::Cpp
 
-// #include <string.h>
 #include "../utils/string.h"
 
 // represents a class that serializes primitives and Strings, adding them to an internal buffer
@@ -51,11 +50,8 @@ public:
 
 	// serializes the given String and writes it to the buffer
 	void write(String* s) {
-		size_t growVal = sizeof(char);
 		write(s->size_);
-		growBufferIfNeeded(growVal * s->size_);
-		memcpy(buffer+offset, s->c_str(), s->size_ * growVal); // make variable here of size
-		offset += s->size_ * growVal;
+		write(s->cstr_);
 	}
 
 	// serializes the given char and writes it to the buffer
@@ -67,7 +63,14 @@ public:
 	}
 
 	void write(char* chars) {
-		size_t growVal = strlen(chars) * sizeof(char);
+		size_t growVal = strlen(chars) + 1;
+		growBufferIfNeeded(growVal);
+		memcpy(buffer+offset, chars, growVal);
+		offset += growVal;
+	}
+
+	void writeNoNull(char* chars, size_t size) {
+		size_t growVal = size;
 		growBufferIfNeeded(growVal);
 		memcpy(buffer+offset, chars, growVal);
 		offset += growVal;
@@ -122,15 +125,23 @@ public:
 
 	// reads a char array from the buffer
 	char* readChars(size_t size) {
-		char* result = buffer+offset;
-		offset += size * sizeof(char);
+		char* result = new char[size + 1];
+		memcpy(result, buffer+offset, size + 1);
+		offset += size + 1;
+		return result;
+	}
+
+	char* readCharsNoNull(size_t size) {
+		char* result = new char[size];
+		memcpy(result, buffer+offset, size);
+		offset += size;
 		return result;
 	}
 
 	// reads a char from the buffer
 	char readChar() {
 		size_t cpySize = sizeof(char);
-		char result = '\0';
+		char result;
 		memcpy(&result, buffer+offset, cpySize);
 		offset += cpySize;
 		return result;
@@ -139,8 +150,7 @@ public:
 	// reads a String from the buffer
 	String* readString() {
 		size_t size = readSizeT();
-		char* cstr = readChars(size);
-		String* result = new String(cstr, size);
+		String* result = new String(readChars(size));
 		return result;
 	}
 

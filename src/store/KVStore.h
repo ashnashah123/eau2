@@ -33,6 +33,7 @@ public:
             Message* msg = net_->recv_m();
             if (msg->kind_ == MsgKind::DATA) {
                 DataMessage* data_msg = dynamic_cast<DataMessage*>(msg);
+                // std::cout << "Received a msgkind::DATA. I am node: " << node_num_ << " with key name: " << data_msg->key_->get_name()->cstr_ << " with key_->home(): " << data_msg->key_->home() << "\n";
                 if (data_msg->key_->home() == node_num_) {
                     put_(data_msg->key_, data_msg->data_);
                 }
@@ -43,11 +44,14 @@ public:
             }
             else if (msg->kind_ == MsgKind::DATA_REQUEST) {
                 DataRequest* data_request = dynamic_cast<DataRequest*>(msg);
+                // std::cout << "Received a msgkind::DATA_REQUEST. I am node: " << node_num_ << " with key name: " << data_request->key_->get_name()->cstr_ << " with key_->home(): " << data_request->key_->home() << "\n";
+
                 Value* val = waitAndGet_(data_request->key_);
                 assert(val != nullptr);
                 // if the data does not exist on our node (like if we never had data in the first place so the SI DF was never created... then don't send back a null value)
                 if (val != nullptr) {
                     DataMessage* data_msg = new DataMessage(data_request->key_, val, data_request->sender_, node_num_);
+                    // std::cout << "Sending a message back. I am node: " << node_num_ << " with key name: " << data_msg->key_->get_name()->cstr_ << " with key_->home(): " << data_msg->key_->home() << "\n";
                     net_->send_m(data_msg);
                 }
             }
@@ -69,6 +73,7 @@ public:
     }
 
     Value* waitAndGet_(Key* key) {
+        // std::cout << "wag::Key(" << key->get_name()->cstr_ << ", " << key->home() << ") \n";
         // if the key is living / will live on us:
         if (key->home() != node_num_) {
             // ask the network to get the value for us by sending a data request message with our node num so they know the sender
@@ -97,6 +102,10 @@ public:
 
     // called by any node when distributing data
     void put_(Key* key, Value* value) {
+        Key k{new String("data-k-0-1"), 1};
+        if (k.equals(key)) {
+            std::cout << "val size: " << value->size <<  "\n";
+        }
         // check that we are on the intended node for the key passed in
         if (key->home() == node_num_) {
             lock_.lock(); // Acquire the lock
